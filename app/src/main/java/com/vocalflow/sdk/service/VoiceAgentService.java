@@ -135,6 +135,8 @@ public class VoiceAgentService extends Service {
                     stopCommandMode();
                     return;
                 }
+
+                stopCommandMode();
                 
                 // Process command with LLM
                 llmService.getResponse(command, new LLMService.LLMResponseCallback() {
@@ -241,7 +243,7 @@ public class VoiceAgentService extends Service {
                 }
             });
         }
-        wakeWordDetector.startDetection();
+        // wakeWordDetector.startDetection();
     }
 
     private void cleanup() {

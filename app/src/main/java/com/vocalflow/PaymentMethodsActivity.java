@@ -47,6 +47,7 @@ public class PaymentMethodsActivity extends AppCompatActivity {
         CardView debitCardCard = findViewById(R.id.debitCardCard);
         CardView upiCard = findViewById(R.id.upiCard);
         CardView netBankingCard = findViewById(R.id.netBankingCard);
+        CardView flashCard = findViewById(R.id.flashCard);
 
         View.OnClickListener paymentMethodClickListener = v -> {
             String paymentMethod = "";
@@ -58,6 +59,8 @@ public class PaymentMethodsActivity extends AppCompatActivity {
                 paymentMethod = "UPI";
             } else if (v.getId() == R.id.netBankingCard) {
                 paymentMethod = "Net Banking";
+            } else if (v.getId() == R.id.flashCard) {
+                paymentMethod = "Flash";
             }
 
             // Navigate to payment processing screen
@@ -72,6 +75,7 @@ public class PaymentMethodsActivity extends AppCompatActivity {
         debitCardCard.setOnClickListener(paymentMethodClickListener);
         upiCard.setOnClickListener(paymentMethodClickListener);
         netBankingCard.setOnClickListener(paymentMethodClickListener);
+        flashCard.setOnClickListener(paymentMethodClickListener);
     }
 
     private void showPaymentDialog(String paymentMethod, String billType, double amount) {
@@ -96,5 +100,11 @@ public class PaymentMethodsActivity extends AppCompatActivity {
     public void onBackPressed() {
         // Simply finish this activity to go back to BillPayActivity
         finish();
+    }
+
+    @Override
+    public boolean onSupportNavigateUp() {
+        onBackPressed();
+        return true;
     }
 } 

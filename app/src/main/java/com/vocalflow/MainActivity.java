@@ -92,7 +92,7 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle("Luma");
+            getSupportActionBar().setTitle("Luma (" + username + ")");
         }
 
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);

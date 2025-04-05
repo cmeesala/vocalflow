@@ -4,7 +4,7 @@ public class InteractionEvent {
     public long timestamp;
     public int viewId;
     public String screenName;
-    public String actionType; // "click", "input", "navigation"
+    public String actionType; 
     public String additionalData;
 
     public InteractionEvent(long timestamp, int viewId, String screenName, String actionType, String additionalData) {

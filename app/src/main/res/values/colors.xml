@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="purple_200">#4A90E2</color>
+    <color name="purple_500">#1565C0</color>
+    <color name="purple_700">#0D47A1</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
     
     <!-- Theme colors -->
-    <color name="primary">#FF212121</color>
-    <color name="primary_variant">#FF000000</color>
-    <color name="secondary">#FF424242</color>
-    <color name="secondary_variant">#FF212121</color>
+    <color name="primary">#1565C0</color>
+    <color name="primary_variant">#0D47A1</color>
+    <color name="secondary">#4A90E2</color>
+    <color name="secondary_variant">#1976D2</color>
     
     <!-- App specific colors -->
     <color name="primary_dark">@color/primary_variant</color>
@@ -21,4 +21,14 @@
     <color name="text_secondary">#99000000</color>
     <color name="gray">#757575</color>
     <color name="green_success">#4CAF50</color>
+    
+    <!-- Material Design colors -->
+    <color name="background">#FFFFFFFF</color>
+    <color name="surface">#FFFFFFFF</color>
+    <color name="error">#FF0000</color>
+    <color name="on_primary">#FFFFFFFF</color>
+    <color name="on_secondary">#FFFFFFFF</color>
+    <color name="on_background">#FF000000</color>
+    <color name="on_surface">#FF000000</color>
+    <color name="on_error">#FFFFFFFF</color>
 </resources> 

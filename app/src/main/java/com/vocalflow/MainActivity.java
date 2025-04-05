@@ -29,13 +29,15 @@ import com.vocalflow.sdk.service.VoiceAgentService;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
-    private static final String PREFS_NAME = "VoiceAgentPrefs";
+    private static final String PREFS_NAME = "UserPrefs";
+    private static final String KEY_USERNAME = "username";
     private static final String KEY_VOICE_ENABLED = "voice_enabled";
     
     private SwitchCompat voiceAgentSwitch;
     private VoiceAgentService voiceAgentService;
     private boolean isBound = false;
     private SharedPreferences prefs;
+    private SharedPreferences userPrefs;
 
     private final ActivityResultLauncher<String[]> permissionLauncher =
         registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
@@ -76,6 +78,16 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
+        // Check if user is logged in
+        userPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String username = userPrefs.getString(KEY_USERNAME, null);
+        if (username == null) {
+            // User not logged in, redirect to login
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+            return;
+        }
+
         // Set up toolbar
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -106,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
         // Set up click listeners for service cards
         CardView payBillCard = findViewById(R.id.payBillCard);
         CardView sendMoneyCard = findViewById(R.id.sendMoneyCard);
-        CardView updateProfileCard = findViewById(R.id.updateProfileCard);
+        CardView logoutCard = findViewById(R.id.logoutCard);
         CardView manageCardsCard = findViewById(R.id.manageCardsCard);
 
         payBillCard.setOnClickListener(v -> {
@@ -118,8 +130,19 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Send Money feature coming soon", Toast.LENGTH_SHORT).show();
         });
 
-        updateProfileCard.setOnClickListener(v -> {
-            Toast.makeText(this, "Update Profile feature coming soon", Toast.LENGTH_SHORT).show();
+        logoutCard.setOnClickListener(v -> {
+            new AlertDialog.Builder(this)
+                .setTitle("Logout")
+                .setMessage("Are you sure you want to logout?")
+                .setPositiveButton("Yes", (dialog, which) -> {
+                    // Clear user session
+                    userPrefs.edit().remove(KEY_USERNAME).apply();
+                    Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show();
+                    startActivity(new Intent(this, LoginActivity.class));
+                    finish();
+                })
+                .setNegativeButton("No", null)
+                .show();
         });
 
         manageCardsCard.setOnClickListener(v -> {

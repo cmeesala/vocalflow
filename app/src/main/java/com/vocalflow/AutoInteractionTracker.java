@@ -93,12 +93,20 @@ public class AutoInteractionTracker {
                 // Only handle click events
                 if (event.getAction() == MotionEvent.ACTION_UP) {
                     String viewName = v.getClass().getSimpleName();
-                    String viewId = v.getId() != View.NO_ID ? 
-                        v.getResources().getResourceName(v.getId()) : "NO_ID";
+                    String viewId = "NO_ID";
+                    try {
+                        if (v.getId() != View.NO_ID) {
+                            viewId = v.getResources().getResourceName(v.getId());
+                        }
+                    } catch (Exception e) {
+                        Log.w(TAG, "Failed to get resource name for view ID: " + e.getMessage());
+                        viewId = "id/" + v.getId();
+                    }
+                    
                     Log.d(TAG, String.format("Click detected - Screen: %s, View: %s, ID: %s", 
                         screenName, viewName, viewId));
                     
-                    logEvent(new InteractionEvent(System.currentTimeMillis(), v.getId(), screenName, "click", null));
+                    logEvent(new InteractionEvent(System.currentTimeMillis(), v.getId(), viewId, screenName, "click"));
                 }
                 // Return false to allow the original click to proceed
                 return false;
@@ -110,12 +118,20 @@ public class AutoInteractionTracker {
             ((EditText) view).addTextChangedListener(new TextWatcher() {
                 @Override public void afterTextChanged(Editable s) {
                     String viewName = view.getClass().getSimpleName();
-                    String viewId = view.getId() != View.NO_ID ? 
-                        view.getResources().getResourceName(view.getId()) : "NO_ID";
+                    String viewId = "NO_ID";
+                    try {
+                        if (view.getId() != View.NO_ID) {
+                            viewId = view.getResources().getResourceName(view.getId());
+                        }
+                    } catch (Exception e) {
+                        Log.w(TAG, "Failed to get resource name for view ID: " + e.getMessage());
+                        viewId = "id/" + view.getId();
+                    }
+                    
                     Log.d(TAG, String.format("Text input detected - Screen: %s, View: %s, ID: %s, Text: %s", 
                         screenName, viewName, viewId, s.toString()));
                     
-                    logEvent(new InteractionEvent(System.currentTimeMillis(), view.getId(), screenName, "input", s.toString()));
+                    logEvent(new InteractionEvent(System.currentTimeMillis(), view.getId(), viewId, screenName, "input"));
                 }
 
                 @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}

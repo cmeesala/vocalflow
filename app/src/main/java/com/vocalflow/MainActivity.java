@@ -15,13 +15,15 @@ import android.speech.SpeechRecognizer;
 import android.util.Log;
 import android.widget.Toast;
 import androidx.appcompat.widget.SwitchCompat;
+import androidx.cardview.widget.CardView;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+import androidx.appcompat.widget.Toolbar;
 
 import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 
 import com.vocalflow.sdk.service.VoiceAgentService;
 
@@ -74,6 +76,13 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
+        // Set up toolbar
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle("Luma");
+        }
+
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         voiceAgentSwitch = findViewById(R.id.voiceAgentSwitch);
         
@@ -92,6 +101,29 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 stopVoiceAgentService();
             }
+        });
+
+        // Set up click listeners for service cards
+        CardView payBillCard = findViewById(R.id.payBillCard);
+        CardView sendMoneyCard = findViewById(R.id.sendMoneyCard);
+        CardView updateProfileCard = findViewById(R.id.updateProfileCard);
+        CardView manageCardsCard = findViewById(R.id.manageCardsCard);
+
+        payBillCard.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, BillPayActivity.class);
+            startActivity(intent);
+        });
+
+        sendMoneyCard.setOnClickListener(v -> {
+            Toast.makeText(this, "Send Money feature coming soon", Toast.LENGTH_SHORT).show();
+        });
+
+        updateProfileCard.setOnClickListener(v -> {
+            Toast.makeText(this, "Update Profile feature coming soon", Toast.LENGTH_SHORT).show();
+        });
+
+        manageCardsCard.setOnClickListener(v -> {
+            Toast.makeText(this, "Manage Cards feature coming soon", Toast.LENGTH_SHORT).show();
         });
 
         // Only check permissions if voice is enabled

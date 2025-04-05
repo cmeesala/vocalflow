@@ -5,6 +5,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -12,8 +13,8 @@ import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.util.Log;
-import android.widget.TextView;
 import android.widget.Toast;
+import androidx.appcompat.widget.SwitchCompat;
 
 import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResultLauncher;
@@ -26,9 +27,13 @@ import com.vocalflow.sdk.service.VoiceAgentService;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
-    private TextView speechTextView;
+    private static final String PREFS_NAME = "VoiceAgentPrefs";
+    private static final String KEY_VOICE_ENABLED = "voice_enabled";
+    
+    private SwitchCompat voiceAgentSwitch;
     private VoiceAgentService voiceAgentService;
     private boolean isBound = false;
+    private SharedPreferences prefs;
 
     private final ActivityResultLauncher<String[]> permissionLauncher =
         registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
@@ -39,7 +44,7 @@ public class MainActivity extends AppCompatActivity {
                     break;
                 }
             }
-            if (allGranted) {
+            if (allGranted && voiceAgentSwitch.isChecked()) {
                 startVoiceAgentService();
             } else {
                 showPermissionDeniedDialog();
@@ -52,7 +57,6 @@ public class MainActivity extends AppCompatActivity {
             VoiceAgentService.LocalBinder binder = (VoiceAgentService.LocalBinder) service;
             voiceAgentService = binder.getService();
             isBound = true;
-            voiceAgentService.setSpeechTextView(speechTextView);
             Log.d(TAG, "VoiceAgentService connected");
         }
 
@@ -70,16 +74,35 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
-        speechTextView = findViewById(R.id.speechTextView);
-        Log.d(TAG, "Checking permissions on startup");
+        prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        voiceAgentSwitch = findViewById(R.id.voiceAgentSwitch);
+        
+        // Set voice agent off by default
+        boolean voiceEnabled = prefs.getBoolean(KEY_VOICE_ENABLED, false);
+        voiceAgentSwitch.setChecked(voiceEnabled);
+        
+        voiceAgentSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            prefs.edit().putBoolean(KEY_VOICE_ENABLED, isChecked).apply();
+            if (isChecked) {
+                if (checkPermissions()) {
+                    startVoiceAgentService();
+                } else {
+                    showPermissionRationaleDialog();
+                }
+            } else {
+                stopVoiceAgentService();
+            }
+        });
 
-        // Check and request permissions
-        if (checkPermissions()) {
-            Log.d(TAG, "All permissions granted, starting service");
-            startVoiceAgentService();
-        } else {
-            Log.d(TAG, "Some permissions not granted, showing rationale dialog");
-            showPermissionRationaleDialog();
+        // Only check permissions if voice is enabled
+        if (voiceEnabled) {
+            if (checkPermissions()) {
+                Log.d(TAG, "All permissions granted, starting service");
+                startVoiceAgentService();
+            } else {
+                Log.d(TAG, "Some permissions not granted, showing rationale dialog");
+                showPermissionRationaleDialog();
+            }
         }
     }
 
@@ -90,6 +113,15 @@ public class MainActivity extends AppCompatActivity {
             unbindService(serviceConnection);
             isBound = false;
         }
+    }
+
+    private void stopVoiceAgentService() {
+        if (isBound) {
+            unbindService(serviceConnection);
+            isBound = false;
+        }
+        Intent intent = new Intent(this, VoiceAgentService.class);
+        stopService(intent);
     }
 
     private boolean checkPermissions() {
@@ -152,6 +184,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startVoiceAgentService() {
+        if (!voiceAgentSwitch.isChecked()) {
+            return;
+        }
         Intent intent = new Intent(this, VoiceAgentService.class);
         startService(intent);
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);

@@ -93,21 +93,29 @@ public class WakeWordDetector {
                 if (matches != null && !matches.isEmpty()) {
                     String transcription = matches.get(0).toLowerCase();
                     Log.d(TAG, "Received transcription: " + transcription);
+                    Log.d(TAG, "Looking for wake word: " + wakeWord);
                     
                     if (transcription.contains(wakeWord)) {
                         Log.d(TAG, "Wake word detected: " + transcription);
                         isListening = false;  // Stop listening when wake word detected
                         if (wakeWordListener != null) {
+                            Log.d(TAG, "Notifying wake word listener");
                             wakeWordListener.onWakeWordDetected();
+                        } else {
+                            Log.e(TAG, "Wake word listener is null!");
                         }
                     } else {
+                        Log.d(TAG, "No wake word found in transcription");
                         // Not the wake word, continue listening after a delay
                         new Handler(Looper.getMainLooper()).postDelayed(() -> {
                             if (isListening && !isProcessing) {
+                                Log.d(TAG, "Continuing wake word detection");
                                 startDetection();
                             }
                         }, RETRY_DELAY_MS);
                     }
+                } else {
+                    Log.d(TAG, "No matches in results");
                 }
             }
 

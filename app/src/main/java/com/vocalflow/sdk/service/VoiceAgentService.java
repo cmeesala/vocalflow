@@ -1,4 +1,4 @@
-package com.vocalflow.service;
+package com.vocalflow.sdk.service;
 
 import android.app.Service;
 import android.content.Context;
@@ -9,13 +9,14 @@ import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.widget.TextView;
 
-import com.vocalflow.LLMService;
+import com.vocalflow.BuildConfig;
+import com.vocalflow.sdk.llm.LLMService;
 import com.vocalflow.sdk.speech.CommandListener;
 import com.vocalflow.sdk.speech.WakeWordDetector;
 
 public class VoiceAgentService extends Service {
     private static final String TAG = "VoiceAgentService";
-    private static final String WAKE_WORD = "hey vocal";
+    private static final String WAKE_WORD = "hey pandora";
     private static final String SLEEP_WORD = "goodbye";
 
     private final IBinder binder = new LocalBinder();
@@ -82,13 +83,15 @@ public class VoiceAgentService extends Service {
         wakeWordDetector.setWakeWordListener(new WakeWordDetector.WakeWordListener() {
             @Override
             public void onWakeWordDetected() {
-                Log.d(TAG, "Wake word detected");
+                Log.d(TAG, "Wake word detected in VoiceAgentService");
                 updateUI(() -> {
                     if (speechTextView != null) {
                         speechTextView.setText("Wake word detected: " + WAKE_WORD);
                     }
                 });
+                Log.d(TAG, "Speaking greeting");
                 textToSpeech.speak("Hi there! How can I help you today", TextToSpeech.QUEUE_FLUSH, null, null);
+                Log.d(TAG, "Starting command mode");
                 startCommandMode();
             }
 
@@ -182,9 +185,12 @@ public class VoiceAgentService extends Service {
         isListeningForCommands = true;
         
         if (wakeWordDetector != null) {
+            Log.d(TAG, "Stopping and destroying wake word detector");
             wakeWordDetector.stopDetection();
             wakeWordDetector.destroy();
             wakeWordDetector = null;
+        } else {
+            Log.e(TAG, "Wake word detector is null in startCommandMode");
         }
         
         // Start command listening with a delay

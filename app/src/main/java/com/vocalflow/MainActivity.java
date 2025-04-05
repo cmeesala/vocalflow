@@ -117,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Create and initialize command listener
+        // Initialize command listener (but don't start it yet)
         if (commandListener != null) {
             commandListener.destroy();
         }
@@ -167,7 +167,7 @@ public class MainActivity extends AppCompatActivity {
             public void onError(int error) {
                 Log.e(TAG, "Command recognition error: " + error);
                 if (isListeningForCommands) {
-                    new android.os.Handler().postDelayed(() -> {
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
                         if (commandListener != null) {
                             commandListener.startListening();
                         }
@@ -194,7 +194,10 @@ public class MainActivity extends AppCompatActivity {
         // Start command listening with a delay
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             if (commandListener != null) {
-                commandListener.startListening();
+                Log.d(TAG, "Starting command listener with delay");
+                commandListener.startListeningWithDelay();
+            } else {
+                Log.e(TAG, "Command listener is null, cannot start listening");
             }
         }, 1000);
     }

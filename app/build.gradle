@@ -6,9 +6,13 @@ android {
     namespace 'com.vocalflow'
     compileSdk 34
 
+    buildFeatures {
+        buildConfig true
+    }
+
     defaultConfig {
         applicationId "com.vocalflow"
-        minSdk 24
+        minSdk 26
         targetSdk 34
         versionCode 1
         versionName "1.0"
@@ -19,6 +23,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField "String", "OPENAI_API_KEY", "\"${getOpenAIKey()}\""
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -28,6 +35,19 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+}
+
+def getOpenAIKey() {
+    def properties = new Properties()
+    def localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        properties.load(localPropertiesFile.newDataInputStream())
+        def apiKey = properties.getProperty('openai.api.key')
+        if (apiKey != null) {
+            return apiKey
+        }
+    }
+    return "YOUR_API_KEY_HERE" // Default value, should be replaced with actual key in local.properties
 }
 
 dependencies {

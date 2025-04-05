@@ -3,6 +3,8 @@ package com.vocalflow.sdk.speech;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
@@ -16,7 +18,6 @@ public class CommandListener {
     private SpeechRecognizerManager speechRecognizerManager;
     private OnCommandListener commandListener;
     private boolean isListening = false;
-    private android.os.Handler handler = new android.os.Handler();
 
     public interface OnCommandListener {
         void onCommandReceived(String command);
@@ -35,10 +36,6 @@ public class CommandListener {
             @Override
             public void onReadyForSpeech(Bundle params) {
                 Log.d(TAG, "Ready for speech");
-                // Start listening again if we're still active
-                if (isListening) {
-                    startListening();
-                }
             }
 
             @Override
@@ -65,35 +62,22 @@ public class CommandListener {
             public void onError(int error) {
                 Log.e(TAG, "Command recognition error: " + error);
                 
+                if (commandListener != null) {
+                    commandListener.onError(error);
+                }
+                
                 // Handle specific error codes
-                switch (error) {
-                    case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
-                        Log.d(TAG, "Recognizer busy, will retry after delay");
-                        new android.os.Handler().postDelayed(() -> {
-                            if (isListening) {
-                                startListening();
-                            }
-                        }, 1000);
-                        break;
-                        
-                    case SpeechRecognizer.ERROR_NO_MATCH:
-                        Log.d(TAG, "No speech detected, will retry");
-                        if (isListening) {
-                            startListening();
-                        }
-                        break;
-                        
-                    default:
-                        Log.e(TAG, "Unhandled error: " + error);
-                        if (isListening) {
-                            // Retry after a longer delay for other errors
-                            new android.os.Handler().postDelayed(() -> {
-                                if (isListening) {
-                                    startListening();
-                                }
-                            }, 2000);
-                        }
-                        break;
+                if (error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
+                    Log.d(TAG, "Recognizer busy, recreating");
+                    speechRecognizerManager.destroy();
+                    setupSpeechRecognizer();
+                }
+                
+                // Restart listening after a delay if still active
+                if (isListening) {
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                        startListening();
+                    }, 1000);
                 }
             }
 
@@ -110,8 +94,9 @@ public class CommandListener {
                 
                 // Continue listening for more commands if still active
                 if (isListening) {
-                    Log.d(TAG, "Continuing to listen for more commands");
-                    startListening();
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                        startListening();
+                    }, 500);
                 }
             }
 
@@ -132,24 +117,28 @@ public class CommandListener {
     }
 
     public void startListening() {
-        if (!isListening) {
-            Log.d(TAG, "Starting command recognition");
-            isListening = true;
-            speechRecognizerManager.startListening();
+        Log.d(TAG, "Starting command recognition");
+        isListening = true;
+        if (speechRecognizerManager == null) {
+            setupSpeechRecognizer();
         }
+        speechRecognizerManager.startListening();
     }
 
     public void stopListening() {
-        if (isListening) {
-            Log.d(TAG, "Stopping command recognition");
-            isListening = false;
+        Log.d(TAG, "Stopping command recognition");
+        isListening = false;
+        if (speechRecognizerManager != null) {
             speechRecognizerManager.stopListening();
         }
     }
 
     public void destroy() {
         Log.d(TAG, "Destroying command listener");
-        stopListening();
-        speechRecognizerManager.destroy();
+        isListening = false;
+        if (speechRecognizerManager != null) {
+            speechRecognizerManager.destroy();
+            speechRecognizerManager = null;
+        }
     }
 } 

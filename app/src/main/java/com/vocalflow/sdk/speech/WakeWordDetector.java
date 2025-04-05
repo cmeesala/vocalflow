@@ -1,45 +1,43 @@
 package com.vocalflow.sdk.speech;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
 import android.speech.RecognitionListener;
-import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.util.Log;
+import android.speech.RecognizerIntent;
+import android.os.Handler;
+import android.os.Looper;
 import java.util.ArrayList;
-import java.util.Locale;
 
 public class WakeWordDetector {
     private static final String TAG = "WakeWordDetector";
-    private static final String WAKE_WORD = "hey pandora";
     private final Context context;
     private final String wakeWord;
-    private final Handler handler;
-    private SpeechRecognizerManager speechRecognizerManager;
+    private SpeechRecognizer speechRecognizer;
     private WakeWordListener wakeWordListener;
-    private boolean isDetecting = false;
-    private static final long RECOGNITION_DELAY = 1000; // 1 second delay between recognitions
-
-    public interface WakeWordListener {
-        void onWakeWordDetected();
-        void onError(int error);
-    }
+    private boolean isListening = false;
+    private boolean isProcessing = false;  // Flag to prevent multiple simultaneous requests
+    private static final int RETRY_DELAY_MS = 2000;  // 2 seconds between retries
 
     public WakeWordDetector(Context context, String wakeWord) {
         this.context = context;
-        this.wakeWord = wakeWord.toLowerCase(Locale.US);
-        this.handler = new Handler();
+        this.wakeWord = wakeWord.toLowerCase();
         setupSpeechRecognizer();
     }
 
     private void setupSpeechRecognizer() {
         Log.d(TAG, "Setting up speech recognizer");
-        speechRecognizerManager = new SpeechRecognizerManager(context);
-        speechRecognizerManager.setRecognitionListener(new RecognitionListener() {
+        if (speechRecognizer != null) {
+            speechRecognizer.destroy();
+        }
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context);
+        speechRecognizer.setRecognitionListener(new RecognitionListener() {
             @Override
-            public void onReadyForSpeech(Bundle params) {
+            public void onReadyForSpeech(Bundle bundle) {
                 Log.d(TAG, "Ready for speech");
+                isProcessing = false;  // Reset processing flag when ready
             }
 
             @Override
@@ -48,13 +46,13 @@ public class WakeWordDetector {
             }
 
             @Override
-            public void onRmsChanged(float rmsdB) {
-                // Not needed for wake word detection
+            public void onRmsChanged(float v) {
+                // Intentionally empty
             }
 
             @Override
-            public void onBufferReceived(byte[] buffer) {
-                // Not needed for wake word detection
+            public void onBufferReceived(byte[] bytes) {
+                // Intentionally empty
             }
 
             @Override
@@ -65,82 +63,123 @@ public class WakeWordDetector {
             @Override
             public void onError(int error) {
                 Log.e(TAG, "Speech recognition error: " + error);
+                isProcessing = false;  // Reset processing flag on error
+                
                 if (wakeWordListener != null) {
                     wakeWordListener.onError(error);
                 }
-                if (isDetecting) {
-                    handler.postDelayed(() -> startDetection(), RECOGNITION_DELAY);
+                
+                // Only restart if we're still supposed to be listening
+                if (!isListening) {
+                    return;
                 }
+
+                // Use longer delay for busy errors
+                int delay = (error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) ? 
+                           RETRY_DELAY_MS * 2 : RETRY_DELAY_MS;
+                
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    if (isListening && !isProcessing) {
+                        startDetection();
+                    }
+                }, delay);
             }
 
             @Override
             public void onResults(Bundle results) {
+                isProcessing = false;  // Reset processing flag when results received
+                
                 ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                 if (matches != null && !matches.isEmpty()) {
-                    String transcription = matches.get(0).toLowerCase(Locale.US);
+                    String transcription = matches.get(0).toLowerCase();
                     Log.d(TAG, "Received transcription: " + transcription);
+                    
                     if (transcription.contains(wakeWord)) {
-                        Log.d(TAG, "Wake word detected: " + wakeWord);
+                        Log.d(TAG, "Wake word detected: " + transcription);
+                        isListening = false;  // Stop listening when wake word detected
                         if (wakeWordListener != null) {
                             wakeWordListener.onWakeWordDetected();
                         }
                     } else {
-                        // If wake word not detected, continue listening
-                        if (isDetecting) {
-                            handler.postDelayed(() -> startDetection(), RECOGNITION_DELAY);
-                        }
-                    }
-                } else {
-                    // No matches, continue listening
-                    if (isDetecting) {
-                        handler.postDelayed(() -> startDetection(), RECOGNITION_DELAY);
+                        // Not the wake word, continue listening after a delay
+                        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                            if (isListening && !isProcessing) {
+                                startDetection();
+                            }
+                        }, RETRY_DELAY_MS);
                     }
                 }
             }
 
             @Override
-            public void onPartialResults(Bundle partialResults) {
-                // Not needed for wake word detection
+            public void onPartialResults(Bundle bundle) {
+                // Intentionally empty
             }
 
             @Override
-            public void onEvent(int eventType, Bundle params) {
-                // Not needed for wake word detection
+            public void onEvent(int i, Bundle bundle) {
+                // Intentionally empty
             }
         });
+    }
+
+    public void startDetection() {
+        Log.d(TAG, "Starting wake word detection");
+        if (isProcessing) {
+            Log.d(TAG, "Skipping start detection - already processing");
+            return;
+        }
+        
+        isListening = true;
+        isProcessing = true;
+        
+        try {
+            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
+            intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
+            intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.getPackageName());
+            
+            speechRecognizer.startListening(intent);
+        } catch (Exception e) {
+            Log.e(TAG, "Error starting detection: " + e.getMessage());
+            isProcessing = false;  // Reset processing flag on error
+            
+            // Try to recover by recreating the recognizer after a delay
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                if (isListening && !isProcessing) {
+                    setupSpeechRecognizer();
+                    startDetection();
+                }
+            }, RETRY_DELAY_MS);
+        }
+    }
+
+    public void stopDetection() {
+        Log.d(TAG, "Stopping wake word detection");
+        isListening = false;
+        isProcessing = false;
+        if (speechRecognizer != null) {
+            speechRecognizer.stopListening();
+        }
+    }
+
+    public void destroy() {
+        Log.d(TAG, "Destroying wake word detector");
+        isListening = false;
+        isProcessing = false;
+        if (speechRecognizer != null) {
+            speechRecognizer.destroy();
+            speechRecognizer = null;
+        }
     }
 
     public void setWakeWordListener(WakeWordListener listener) {
         this.wakeWordListener = listener;
     }
 
-    public void startDetection() {
-        if (!isDetecting) {
-            Log.d(TAG, "Starting wake word detection");
-            isDetecting = true;
-        }
-        speechRecognizerManager.startListening();
-    }
-
-    public void stopDetection() {
-        if (isDetecting) {
-            Log.d(TAG, "Stopping wake word detection");
-            isDetecting = false;
-            // Add a small delay before stopping to avoid busy error
-            new Handler().postDelayed(() -> {
-                if (speechRecognizerManager != null) {
-                    speechRecognizerManager.stopListening();
-                }
-            }, 500);
-        }
-    }
-
-    public void destroy() {
-        Log.d(TAG, "Destroying wake word detector");
-        stopDetection();
-        if (speechRecognizerManager != null) {
-            speechRecognizerManager.destroy();
-            speechRecognizerManager = null;
-        }
+    public interface WakeWordListener {
+        void onWakeWordDetected();
+        void onError(int error);
     }
 } 

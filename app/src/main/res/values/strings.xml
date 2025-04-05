@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">VocalFlow</string>
+    <string name="app_name">V Flow</string>
     <string name="prompt_hint">Enter your message...</string>
     <string name="send">Send</string>
     <string name="microphone">Microphone</string>

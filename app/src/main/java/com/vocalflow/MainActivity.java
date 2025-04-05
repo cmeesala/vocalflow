@@ -13,6 +13,8 @@ import com.vocalflow.sdk.speech.WakeWordDetector;
 import com.vocalflow.sdk.speech.CommandListener;
 import android.widget.TextView;
 import com.vocalflow.sdk.llm.LLMService;
+import android.os.Handler;
+import android.os.Looper;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -74,18 +76,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupVoiceAgent() {
-        // Initialize LLM service with API key from environment variable
-        String apiKey = System.getenv("OPENAI_API_KEY");
+        // Initialize LLM service with API key from BuildConfig
+        String apiKey = BuildConfig.OPENAI_API_KEY;
         if (apiKey == null || apiKey.isEmpty()) {
-            Log.e(TAG, "OPENAI_API_KEY environment variable not set");
+            Log.e(TAG, "OPENAI_API_KEY not configured in BuildConfig");
             runOnUiThread(() -> {
-                speechTextView.setText("Error: API key not configured. Please set OPENAI_API_KEY environment variable.");
+                speechTextView.setText("Error: API key not configured. Please check application configuration.");
             });
             return;
         }
         
-        llmService = new LLMService(apiKey);
+        llmService = new LLMService(this, apiKey);
 
+        // Create and initialize wake word detector
+        if (wakeWordDetector != null) {
+            wakeWordDetector.destroy();
+        }
         wakeWordDetector = new WakeWordDetector(this, WAKE_WORD);
         wakeWordDetector.setWakeWordListener(new WakeWordDetector.WakeWordListener() {
             @Override
@@ -102,7 +108,7 @@ public class MainActivity extends AppCompatActivity {
             public void onError(int error) {
                 Log.e(TAG, "Wake word detection error: " + error);
                 if (!isListeningForCommands) {
-                    new android.os.Handler().postDelayed(() -> {
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
                         if (wakeWordDetector != null) {
                             wakeWordDetector.startDetection();
                         }
@@ -111,6 +117,10 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // Create and initialize command listener
+        if (commandListener != null) {
+            commandListener.destroy();
+        }
         commandListener = new CommandListener(this);
         commandListener.setCommandListener(new CommandListener.OnCommandListener() {
             @Override
@@ -166,6 +176,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // Start wake word detection
+        isListeningForCommands = false;
         wakeWordDetector.startDetection();
     }
 
@@ -173,13 +185,14 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "Starting command mode");
         isListeningForCommands = true;
         
-        // First stop wake word detection
         if (wakeWordDetector != null) {
             wakeWordDetector.stopDetection();
+            wakeWordDetector.destroy();  // Fully destroy the detector while in command mode
+            wakeWordDetector = null;     // Set to null to prevent accidental usage
         }
         
-        // Add a delay to ensure recognizer is fully released
-        new android.os.Handler().postDelayed(() -> {
+        // Start command listening with a delay
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
             if (commandListener != null) {
                 commandListener.startListening();
             }
@@ -190,17 +203,14 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "Stopping command mode");
         isListeningForCommands = false;
         
-        // First stop command listening
         if (commandListener != null) {
             commandListener.stopListening();
         }
-        
-        // Add a delay to ensure recognizer is fully released
-        new android.os.Handler().postDelayed(() -> {
-            if (wakeWordDetector != null) {
-                wakeWordDetector.startDetection();
-            }
-        }, 1000);
+
+        // Recreate and restart wake word detection with a delay
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            setupVoiceAgent();  // This will recreate the wake word detector
+        }, 2000);
     }
 
     @Override

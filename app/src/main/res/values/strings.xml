@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VocalFlow</string>
+    <string name="prompt_hint">Enter your message...</string>
+    <string name="send">Send</string>
+    <string name="microphone">Microphone</string>
+    <string name="permission_required">Microphone permission is required for voice input</string>
+    <string name="permission_denied">Microphone permission denied</string>
+    <string name="error_occurred">An error occurred</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+</resources> 

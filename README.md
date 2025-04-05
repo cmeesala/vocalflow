@@ -4,7 +4,7 @@ VocalFlow is an Android voice assistant application that uses wake word detectio
 
 ## Features
 
-- Wake word detection ("hey pandora")
+- Wake word detection ("hey luma")
 - Continuous command listening
 - Natural language processing using OpenAI's GPT-3.5
 - Text-to-speech responses
@@ -31,7 +31,7 @@ VocalFlow is an Android voice assistant application that uses wake word detectio
 ## Usage
 
 1. Launch the app
-2. Say "hey pandora" to wake up the assistant
+2. Say "hey luma" to wake up the assistant
 3. Speak your command or question
 4. The assistant will respond through both text and speech
 5. Say "goodbye" to end the conversation

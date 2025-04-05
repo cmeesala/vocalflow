@@ -8,10 +8,15 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     
+    <!-- Theme colors -->
+    <color name="primary">#FF212121</color>
+    <color name="primary_variant">#FF000000</color>
+    <color name="secondary">#FF424242</color>
+    <color name="secondary_variant">#FF212121</color>
+    
     <!-- App specific colors -->
-    <color name="primary">@color/purple_500</color>
-    <color name="primary_dark">@color/purple_700</color>
-    <color name="accent">@color/teal_200</color>
+    <color name="primary_dark">@color/primary_variant</color>
+    <color name="accent">@color/secondary</color>
     <color name="text_primary">#DE000000</color>
     <color name="text_secondary">#99000000</color>
     <color name="gray">#757575</color>

@@ -16,7 +16,7 @@ import com.vocalflow.sdk.speech.WakeWordDetector;
 
 public class VoiceAgentService extends Service {
     private static final String TAG = "VoiceAgentService";
-    private static final String WAKE_WORD = "hey pandora";
+    private static final String WAKE_WORD = "hey luma";
     private static final String SLEEP_WORD = "goodbye";
 
     private final IBinder binder = new LocalBinder();

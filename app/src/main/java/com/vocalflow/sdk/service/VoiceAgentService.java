@@ -143,7 +143,10 @@ public class VoiceAgentService extends Service {
                 }
 
                 stopCommandMode();
+                executeCommand(command);
+            }
 
+            public void executeCommand(String command) {
                 final AutoInteractionTracker interactionTracker = AutoInteractionTracker.getInstance();
                 final List<InteractionEvent> events = interactionTracker.getEvents();
                 final InteractionReplayManager replayManager = VocalFlowApplication.getReplayManager();

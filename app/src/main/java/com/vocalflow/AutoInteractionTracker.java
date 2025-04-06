@@ -2,6 +2,8 @@ package com.vocalflow;
 
 import android.app.Activity;
 import android.app.Application;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -16,6 +18,7 @@ import android.widget.TextView;
 import androidx.cardview.widget.CardView;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class AutoInteractionTracker {
@@ -148,11 +151,61 @@ public class AutoInteractionTracker {
             InteractionEvent removed = eventBuffer.remove(0);
             Log.d(TAG, "Buffer full, removed oldest event: " + removed.toString());
         }
-        Log.d(TAG, "Current buffer size: " + eventBuffer.size());
+        Log.d(TAG, "Current buffer size: " + eventBuffer.size()); 
+        tryRelayIntent(event);
+    }
+
+    private void tryRelayIntent(InteractionEvent event) {
+        String screenName = event.getScreenName();
+        if(!screenName.equals("PaymentProcessingActivity")) return;
+        Activity currentActivity = getCurrentActivity();
+        if (currentActivity != null) {
+            SharedPreferences prefs = currentActivity.getSharedPreferences("PaymentPrefs", Context.MODE_PRIVATE);
+            String billType = prefs.getString("bill_type", "");
+            String amount = prefs.getString("amount", "");
+            String paymentMethod = prefs.getString("payment_method", "");
+            
+            String intentText = String.format("Your %s Bill of %s has been successfully paid through %s.", billType, amount, paymentMethod);
+            Log.d(TAG, "Intent Text: " + intentText);
+            List<InteractionEvent> events = new ArrayList<>();
+            for(int i=eventBuffer.size()-2; i>=0; i--) {
+                InteractionEvent e = eventBuffer.get(i);
+                events.add(e);
+                if(e.getScreenName().equals("MainActivity")) break;
+            }
+            Collections.reverse(events);
+        }
+        eventBuffer.clear();
     }
 
     public List<InteractionEvent> getEvents() {
         Log.d(TAG, "Retrieving " + eventBuffer.size() + " events");
-        return new ArrayList<>(eventBuffer);
+        List<InteractionEvent> events = new ArrayList<>(eventBuffer);
+        Collections.reverse(events);
+        return events;
+    }
+
+    private Activity getCurrentActivity() {
+        try {
+            Class activityThreadClass = Class.forName("android.app.ActivityThread");
+            Object activityThread = activityThreadClass.getMethod("currentActivityThread").invoke(null);
+            Field activitiesField = activityThreadClass.getDeclaredField("mActivities");
+            activitiesField.setAccessible(true);
+            Object activities = activitiesField.get(activityThread);
+            
+            for (Object activityRecord : ((android.util.ArrayMap) activities).values()) {
+                Class activityRecordClass = activityRecord.getClass();
+                Field pausedField = activityRecordClass.getDeclaredField("paused");
+                pausedField.setAccessible(true);
+                if (!pausedField.getBoolean(activityRecord)) {
+                    Field activityField = activityRecordClass.getDeclaredField("activity");
+                    activityField.setAccessible(true);
+                    return (Activity) activityField.get(activityRecord);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting current activity", e);
+        }
+        return null;
     }
 } 

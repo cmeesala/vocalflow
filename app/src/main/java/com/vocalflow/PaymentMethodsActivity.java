@@ -1,6 +1,7 @@
 package com.vocalflow;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
@@ -63,6 +64,12 @@ public class PaymentMethodsActivity extends AppCompatActivity {
                 paymentMethod = "Flash";
             }
 
+            SharedPreferences prefs = getSharedPreferences("PaymentPrefs", MODE_PRIVATE);
+            prefs.edit()
+                .putString("bill_type", billType)
+                .putString("amount", String.valueOf(amount))
+                .putString("payment_method", paymentMethod)
+                .apply();
             // Navigate to payment processing screen
             Intent intent = new Intent(this, PaymentProcessingActivity.class);
             intent.putExtra("bill_type", billType);

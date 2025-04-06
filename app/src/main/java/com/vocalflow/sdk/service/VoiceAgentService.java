@@ -18,7 +18,20 @@ import com.vocalflow.sdk.llm.LLMService;
 import com.vocalflow.sdk.speech.CommandListener;
 import com.vocalflow.sdk.speech.WakeWordDetector;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class VoiceAgentService extends Service {
     private static final String TAG = "VoiceAgentService";
@@ -147,10 +160,63 @@ public class VoiceAgentService extends Service {
             }
 
             public void executeCommand(String command) {
-                final AutoInteractionTracker interactionTracker = AutoInteractionTracker.getInstance();
-                final List<InteractionEvent> events = interactionTracker.getEvents();
-                final InteractionReplayManager replayManager = VocalFlowApplication.getReplayManager();
-                replayManager.replay(events);
+                ExecutorService executor = Executors.newSingleThreadExecutor();
+                executor.execute(() -> {
+                    try {
+                        // Make API call
+                        String apiUrl = "https://web-production-9ea4.up.railway.app/api/get_interactions/?intent_text=" + 
+                                      java.net.URLEncoder.encode(command, "UTF-8");
+                        URL url = new URL(apiUrl);
+                        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                        connection.setRequestMethod("GET");
+                        
+                        int responseCode = connection.getResponseCode();
+                        if (responseCode == HttpURLConnection.HTTP_OK) {
+                            BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                            String inputLine;
+                            StringBuilder response = new StringBuilder();
+                            
+                            while ((inputLine = in.readLine()) != null) {
+                                response.append(inputLine);
+                            }
+                            in.close();
+                            
+                            // Parse JSON response
+                            JSONArray jsonArray = new JSONArray(response.toString());
+                            List<InteractionEvent> events = new ArrayList<>();
+                            
+                            for (int i = 0; i < jsonArray.length(); i++) {
+                                JSONObject eventJson = jsonArray.getJSONObject(i);
+                                // Convert timestamp from ISO format to milliseconds
+                                String timestampStr = eventJson.getString("timestamp");
+                                long timestamp = java.time.Instant.parse(timestampStr).toEpochMilli();
+                                
+                                InteractionEvent event = new InteractionEvent(
+                                    timestamp,
+                                    eventJson.getInt("view_id"),
+                                    eventJson.getString("view_resource_name"),
+                                    eventJson.getString("screen_name"),
+                                    eventJson.getString("action_type")
+                                );
+                                events.add(event);
+                            }
+                            
+                            // Sort events by timestamp in ascending order
+                            Collections.sort(events, (e1, e2) -> Long.compare(e1.getTimestamp(), e2.getTimestamp()));
+                            
+                            // Replay events on main thread
+                            new android.os.Handler(getMainLooper()).post(() -> {
+                                final InteractionReplayManager replayManager = VocalFlowApplication.getReplayManager();
+                                replayManager.replay(events);
+                            });
+                        } else {
+                            Log.e(TAG, "API call failed with response code: " + responseCode);
+                        }
+                    } catch (IOException | JSONException e) {
+                        Log.e(TAG, "Error executing command: " + e.getMessage());
+                    }
+                });
+                executor.shutdown();
             }
 
             @Override

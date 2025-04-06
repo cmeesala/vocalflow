@@ -16,10 +16,22 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.cardview.widget.CardView;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import java.lang.reflect.Field;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
 
 public class AutoInteractionTracker {
     private static final String TAG = "AutoInteractionTracker";
@@ -174,8 +186,70 @@ public class AutoInteractionTracker {
                 if(e.getScreenName().equals("MainActivity")) break;
             }
             Collections.reverse(events);
+            eventBuffer.clear();
+            relayIntent(intentText, events);
         }
-        eventBuffer.clear();
+    }
+
+    public void relayIntent(String intentText, List<InteractionEvent> events) {
+        Activity currentActivity = getCurrentActivity();
+        if (currentActivity == null) {
+            Log.e(TAG, "No current activity found for API call");
+            return;
+        }
+
+        RequestQueue queue = Volley.newRequestQueue(currentActivity);
+        String url = "https://web-production-9ea4.up.railway.app/api/record_intent/";
+
+        try {
+            JSONObject requestBody = new JSONObject();
+            requestBody.put("intent_text", intentText);
+
+            JSONArray eventsArray = new JSONArray();
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
+            dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+            for (InteractionEvent event : events) {
+                JSONObject eventJson = new JSONObject();
+                eventJson.put("event_type", event.getActionType().toLowerCase());
+                eventJson.put("timestamp", dateFormat.format(event.getTimestamp()));
+                eventJson.put("view_id", event.getViewId());
+                eventJson.put("view_resource_name", event.getViewResourceName());
+                eventJson.put("screen_name", event.getScreenName());
+                eventJson.put("action_type", event.getActionType());
+                eventsArray.put(eventJson);
+            }
+
+            requestBody.put("interaction_events", eventsArray);
+
+            JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
+                Request.Method.POST,
+                url,
+                requestBody,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        Log.d(TAG, "API Response: " + response.toString());
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Log.e(TAG, "API Error: " + error.getMessage());
+                        if (error.networkResponse != null) {
+                            Log.e(TAG, "Status code: " + error.networkResponse.statusCode);
+                            Log.e(TAG, "Response data: " + new String(error.networkResponse.data));
+                        }
+                    }
+                }
+            );
+
+            queue.add(jsonObjectRequest);
+            Log.d(TAG, "API request sent for intent: " + intentText);
+
+        } catch (JSONException e) {
+            Log.e(TAG, "Error creating JSON request: " + e.getMessage());
+        }
     }
 
     public List<InteractionEvent> getEvents() {

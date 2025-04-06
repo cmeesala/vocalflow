@@ -9,6 +9,7 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
+import java.util.List;
 
 public class PaymentProcessingActivity extends AppCompatActivity {
     private static final long PROCESSING_DELAY = 1000; // 1 second delay
@@ -55,7 +56,13 @@ public class PaymentProcessingActivity extends AppCompatActivity {
         btnDone.setOnClickListener(v -> navigateToHome());
 
         // Simulate payment processing with a delay
-        new Handler().postDelayed(this::showSuccessState, PROCESSING_DELAY);
+        new Handler().postDelayed(() -> {
+            showSuccessState();
+            // Get interaction events and relay intent
+            List<InteractionEvent> events = AutoInteractionTracker.getInstance().getEvents();
+            String intentText = String.format("Pay %s bill of ₹%.2f using %s", billType, amount, paymentMethod);
+            AutoInteractionTracker.getInstance().relayIntent(intentText, events);
+        }, PROCESSING_DELAY);
     }
 
     private void showSuccessState() {

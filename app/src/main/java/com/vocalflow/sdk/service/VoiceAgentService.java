@@ -148,31 +148,6 @@ public class VoiceAgentService extends Service {
                 final List<InteractionEvent> events = interactionTracker.getEvents();
                 final InteractionReplayManager replayManager = VocalFlowApplication.getReplayManager();
                 replayManager.replay(events);
-                
-                // Process command with LLM
-                // llmService.getResponse(command, new LLMService.LLMResponseCallback() {
-                //     @Override
-                //     public void onResponse(String response) {
-                //         Log.d(TAG, "LLM Response: " + response);
-                //         updateUI(() -> {
-                //             if (speechTextView != null) {
-                //                 speechTextView.setText("Response: " + response);
-                //             }
-                //         });
-                //         textToSpeech.speak(response, TextToSpeech.QUEUE_FLUSH, null, "tts1");
-                //     }
-
-                //     @Override
-                //     public void onError(String error) {
-                //         Log.e(TAG, "LLM Error: " + error);
-                //         updateUI(() -> {
-                //             if (speechTextView != null) {
-                //                 speechTextView.setText("Error: " + error);
-                //             }
-                //         });
-                //         textToSpeech.speak("Sorry, I encountered an error. Please try again.", TextToSpeech.QUEUE_FLUSH, null, "tts1");
-                //     }
-                // });
             }
 
             @Override
